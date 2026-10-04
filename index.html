@@ -43,7 +43,7 @@
   </div>
 
   <div style="display:flex;gap:.6rem;align-items:center" id="nav-auth">
-    <button class="btn btn-line btn-sm" onclick="openAuth('login')" id="btn-login">Iniciar Sesión</button>
+    <button class="btn btn-line btn-sm" onclick="openAuth('login')" id="btn-login"><span class="lbl-full">Iniciar Sesión</span><span class="lbl-short">Entrar</span></button>
   </div>
 
   <button class="nav-burger" onclick="toggleMenu()" aria-label="Menú">☰</button>
@@ -512,10 +512,12 @@
      VISOR DE FOTOS — pantalla completa al tocar una imagen de la ficha
      ===================================================================== -->
 <div id="lightbox" class="lightbox" aria-hidden="true" onclick="if(event.target===this)closeLightbox()">
+  <div class="lb-title" id="lb-title"></div>
   <button class="lb-close" onclick="closeLightbox()" aria-label="Cerrar">✕</button>
   <button class="lb-nav prev" onclick="lbStep(-1)" aria-label="Foto anterior">‹</button>
   <img id="lb-img" alt="">
   <button class="lb-nav next" onclick="lbStep(1)" aria-label="Foto siguiente">›</button>
+  <button class="lb-ficha" id="lb-ficha" onclick="lbVerFicha()">Ver ficha completa →</button>
   <div class="lb-count" id="lb-count"></div>
 </div>
 
