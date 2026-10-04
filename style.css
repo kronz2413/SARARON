@@ -382,7 +382,7 @@ html[data-brand="dealer"] .type-chip.on { color:var(--bg); }
   border-color:var(--line-strong); transform:translateY(-6px);
   box-shadow:0 22px 52px rgba(0,0,0,.52);
 }
-.veh-media { aspect-ratio:16/10; overflow:hidden; position:relative; background:var(--bg-3); }
+.veh-media { aspect-ratio:4/3; overflow:hidden; position:relative; background:var(--bg-3); }
 .veh-media img { width:100%; height:100%; object-fit:cover; transition:transform .6s cubic-bezier(.22,.61,.36,1); }
 .veh-card:hover .veh-media img { transform:scale(1.07); }
 .veh-media .ph {
@@ -868,11 +868,11 @@ footer { background:var(--bg-2); border-top:1px solid var(--line); padding:3.5re
 .lightbox.open { opacity:1; pointer-events:all; }
 
 .lightbox #lb-img {
-  max-width:94vw; max-height:88vh; object-fit:contain;
+  max-width:94vw; max-height:88vh; max-height:88dvh; object-fit:contain;
   box-shadow:0 30px 80px rgba(0,0,0,.8);
-  animation:lbIn .3s ease;
+  transition:opacity .2s ease;
 }
-@keyframes lbIn { from { opacity:0; transform:scale(.97); } to { opacity:1; transform:none; } }
+.lightbox #lb-img.loading { opacity:0; }
 
 .lb-close {
   position:absolute; top:calc(1rem + env(safe-area-inset-top,0px)); right:1.2rem;
@@ -906,5 +906,60 @@ footer { background:var(--bg-2); border-top:1px solid var(--line); padding:3.5re
   .lb-nav { width:42px; height:42px; font-size:1.4rem; }
   .lb-nav.prev { left:.5rem; }
   .lb-nav.next { right:.5rem; }
-  .lightbox #lb-img { max-width:100vw; max-height:82vh; }
+  .lightbox #lb-img { max-width:100vw; max-height:78vh; max-height:78dvh; }
+}
+
+
+/* =====================================================================
+   AJUSTES: visor desde la tarjeta, táctil y menú en celular
+   ===================================================================== */
+
+/* La foto de la tarjeta se puede tocar para ampliar */
+.veh-media:has(img) { cursor:zoom-in; }
+
+/* Título y botón "Ver ficha" del visor */
+.lb-title {
+  position:absolute; top:calc(1.1rem + env(safe-area-inset-top,0px)); left:1.2rem;
+  max-width:calc(100% - 90px); z-index:2;
+  font-family:var(--font-display); font-size:.95rem; font-weight:600;
+  letter-spacing:.08em; color:#fff; text-shadow:0 2px 10px rgba(0,0,0,.7);
+}
+.lb-ficha {
+  position:absolute; bottom:calc(4rem + env(safe-area-inset-bottom,0px)); left:50%; transform:translateX(-50%);
+  z-index:2; white-space:nowrap;
+  background:var(--accent); color:#fff; border:none; border-radius:var(--radius);
+  font-family:var(--font-display); font-weight:600; font-size:.72rem;
+  letter-spacing:.18em; text-transform:uppercase; padding:.8rem 1.5rem;
+}
+html[data-brand="dealer"] .lb-ficha { color:var(--bg); }
+
+/* En pantallas táctiles no hay "hover": evita que al tocar la tarjeta
+   se quede la foto agrandada o la tarjeta movida a medias */
+@media (hover:none) {
+  .veh-card:hover { transform:none; box-shadow:none; border-color:var(--line); }
+  .veh-card:hover .veh-media img { transform:none; }
+  .veh-card:hover .veh-more { color:var(--txt-faint); }
+}
+
+/* Botón de sesión: texto corto en celular */
+.lbl-short { display:none; }
+
+/* Menú superior compacto en celular: antes el botón de Iniciar Sesión
+   se salía de la pantalla y se veía cortado */
+@media (max-width:780px) {
+  #nav { padding:calc(.7rem + env(safe-area-inset-top,0px)) 1rem .7rem; gap:.55rem; }
+  .nav-logo img { height:30px; }
+  .brand-switch { padding:2px; }
+  .brand-switch button { padding:.4rem .7rem; font-size:.6rem; letter-spacing:.08em; }
+  #nav-auth { flex-shrink:0; }
+  #nav-auth .btn { padding:.5rem .8rem; font-size:.62rem; letter-spacing:.1em; }
+  .lbl-full  { display:none; }
+  .lbl-short { display:inline; }
+  .nav-burger { margin-left:0; font-size:1.35rem; padding:0 .1rem; flex-shrink:0; }
+}
+@media (max-width:360px) {
+  #nav { padding-left:.75rem; padding-right:.75rem; gap:.4rem; }
+  .nav-logo img { height:26px; }
+  .brand-switch button { padding:.38rem .55rem; letter-spacing:.05em; }
+  #nav-auth .btn { padding:.48rem .65rem; }
 }
