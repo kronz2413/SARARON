@@ -1,4 +1,3 @@
-
 /* =====================================================================
    SARARON / LUXURA — HOJA DE ESTILOS
    ---------------------------------------------------------------------
@@ -554,7 +553,7 @@ html[data-brand="dealer"] .veh-price { color:var(--txt); font-weight:400; letter
 }
 
 /* ---------------- DETALLE DE VEHÍCULO ---------------- */
-.vd-gallery { position:relative; background:#000; aspect-ratio:16/9; overflow:hidden; }
+.vd-gallery { position:relative; background:#000; aspect-ratio:4/3; max-height:70vh; overflow:hidden; }
 .vd-gallery img, .vd-gallery video, .vd-gallery iframe {
   width:100%; height:100%; object-fit:contain; border:none; display:block;
 }
@@ -845,4 +844,67 @@ footer { background:var(--bg-2); border-top:1px solid var(--line); padding:3.5re
 /* Campo deshabilitado (correo del perfil) */
 .field input:disabled {
   opacity:.55; cursor:not-allowed; background:var(--bg-3);
+}
+
+
+/* =====================================================================
+   VISOR DE FOTOS A PANTALLA COMPLETA
+   ===================================================================== */
+.vd-gallery img.zoomable { cursor:zoom-in; }
+
+.vd-zoom-hint {
+  position:absolute; bottom:.8rem; left:.8rem; z-index:3; pointer-events:none;
+  background:rgba(0,0,0,.65); color:#fff; backdrop-filter:blur(6px);
+  font-size:.68rem; letter-spacing:.08em; padding:.4rem .75rem; border-radius:999px;
+  border:1px solid rgba(255,255,255,.18);
+}
+
+.lightbox {
+  position:fixed; inset:0; z-index:1400;
+  background:rgba(0,0,0,.94);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity .25s;
+}
+.lightbox.open { opacity:1; pointer-events:all; }
+
+.lightbox #lb-img {
+  max-width:94vw; max-height:88vh; object-fit:contain;
+  box-shadow:0 30px 80px rgba(0,0,0,.8);
+  animation:lbIn .3s ease;
+}
+@keyframes lbIn { from { opacity:0; transform:scale(.97); } to { opacity:1; transform:none; } }
+
+.lb-close {
+  position:absolute; top:calc(1rem + env(safe-area-inset-top,0px)); right:1.2rem;
+  width:44px; height:44px; border-radius:50%;
+  background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.25);
+  color:#fff; font-size:1.1rem;
+  display:flex; align-items:center; justify-content:center;
+  transition:background .25s, border-color .25s; z-index:2;
+}
+.lb-close:hover { background:var(--accent); border-color:var(--accent); }
+
+.lb-nav {
+  position:absolute; top:50%; transform:translateY(-50%);
+  width:52px; height:52px; border-radius:50%;
+  background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.25);
+  color:#fff; font-size:1.7rem; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+  transition:background .25s, border-color .25s; z-index:2;
+}
+.lb-nav:hover { background:var(--accent); border-color:var(--accent); }
+.lb-nav.prev { left:1.2rem; }
+.lb-nav.next { right:1.2rem; }
+
+.lb-count {
+  position:absolute; bottom:calc(1.2rem + env(safe-area-inset-bottom,0px)); left:50%; transform:translateX(-50%);
+  background:rgba(0,0,0,.65); color:#fff; font-size:.78rem; letter-spacing:.14em;
+  padding:.4rem 1rem; border-radius:999px; border:1px solid rgba(255,255,255,.18);
+}
+
+@media (max-width:780px) {
+  .lb-nav { width:42px; height:42px; font-size:1.4rem; }
+  .lb-nav.prev { left:.5rem; }
+  .lb-nav.next { right:.5rem; }
+  .lightbox #lb-img { max-width:100vw; max-height:82vh; }
 }
