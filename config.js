@@ -29,8 +29,8 @@ const CONFIG = {
      2. DATOS DE CONTACTO
      ------------------------------------------------------------------ */
   whatsapp:     '18095397970',          // sólo números, con código de país
-  instagram:    '@luxurautoimport',
-  instagramUrl: 'https://www.instagram.com/luxurautoimport/',
+  instagram:    '@luxura_auto_import_',
+  instagramUrl: 'https://www.instagram.com/luxura_auto_import_',
   email:        '',                     // pendiente — se agrega más adelante
 
   empresa: 'SARARON Centro de Servicios',
