@@ -230,6 +230,7 @@ function setBrand(b) {
     esTaller ? 'img/logo-sararon.jpg' : 'img/logo-luxura.jpg';
 
   buildMobileMenu();
+  renderContactForm();
   if (!esTaller) renderCatalog();
   window.scrollTo({ top: 0, behavior: 'instant' });
   setTimeout(observeReveals, 60);
@@ -608,7 +609,7 @@ function renderVdMedia() {
 
   const m = VD.media[VD.idx];
   let inner;
-  if (m.kind === 'img')          inner = `<img src="${esc(m.src)}" alt="">`;
+  if (m.kind === 'img')          inner = `<img class="zoomable" src="${esc(m.src)}" alt="" onclick="openLightbox()"><div class="vd-zoom-hint">🔍 Toque para ampliar</div>`;
   else if (m.type === 'youtube') inner = `<iframe src="https://www.youtube.com/embed/${esc(m.src)}"
       allowfullscreen allow="accelerometer;autoplay;encrypted-media;gyroscope;picture-in-picture"></iframe>`;
   else                           inner = `<video src="${esc(m.src)}" controls playsinline></video>`;
@@ -626,6 +627,63 @@ function renderVdMedia() {
     </div>`).join('');
 }
 function vdStep(d) { VD.idx = (VD.idx + d + VD.media.length) % VD.media.length; renderVdMedia(); }
+
+
+/* ---------------------------------------------------------------------
+   VISOR DE FOTOS (pantalla completa)
+   Al tocar la foto principal de la ficha se abre en grande, con flechas,
+   teclado y deslizar con el dedo. Al cerrar, la ficha queda en la misma foto.
+   --------------------------------------------------------------------- */
+let LB = { list: [], idx: 0, x0: null };
+
+function openLightbox() {
+  LB.list = VD.media.filter(m => m.kind === 'img').map(m => m.src);
+  if (!LB.list.length) return;
+  const actual = VD.media[VD.idx];
+  LB.idx = Math.max(0, LB.list.indexOf(actual && actual.src));
+  renderLightbox();
+  const lb = document.getElementById('lightbox');
+  lb.classList.add('open');
+  lb.setAttribute('aria-hidden', 'false');
+}
+
+function renderLightbox() {
+  document.getElementById('lb-img').src = LB.list[LB.idx];
+  document.getElementById('lb-count').textContent = `${LB.idx + 1} / ${LB.list.length}`;
+  const varias = LB.list.length > 1;
+  document.querySelectorAll('#lightbox .lb-nav').forEach(b => b.style.display = varias ? '' : 'none');
+  // Precarga la foto siguiente para que el cambio sea instantáneo
+  if (varias) new Image().src = LB.list[(LB.idx + 1) % LB.list.length];
+}
+
+function lbStep(d) {
+  if (LB.list.length < 2) return;
+  LB.idx = (LB.idx + d + LB.list.length) % LB.list.length;
+  renderLightbox();
+}
+
+function closeLightbox() {
+  const lb = document.getElementById('lightbox');
+  if (!lb.classList.contains('open')) return;
+  lb.classList.remove('open');
+  lb.setAttribute('aria-hidden', 'true');
+  // La ficha queda mostrando la foto que se estaba viendo
+  const i = VD.media.findIndex(m => m.kind === 'img' && m.src === LB.list[LB.idx]);
+  if (i > -1) { VD.idx = i; renderVdMedia(); }
+}
+
+// Deslizar con el dedo en el celular
+(function () {
+  const lb = document.getElementById('lightbox');
+  if (!lb) return;
+  lb.addEventListener('touchstart', e => { LB.x0 = e.touches[0].clientX; }, { passive: true });
+  lb.addEventListener('touchend', e => {
+    if (LB.x0 === null) return;
+    const dx = e.changedTouches[0].clientX - LB.x0;
+    LB.x0 = null;
+    if (Math.abs(dx) > 50) lbStep(dx < 0 ? 1 : -1);
+  });
+})();
 
 
 /* =====================================================================
@@ -1339,16 +1397,82 @@ async function importarJeepInicial() {
    9. CONTACTO, PDF Y UTILIDADES
    ===================================================================== */
 
+/* ---------------------------------------------------------------------
+   FORMULARIO DE SOLICITUD — cambia según la sección
+   Taller: servicios mecánicos.  Dealer: sólo temas del dealer.
+   Para agregar o quitar opciones, edite estas dos listas.
+   --------------------------------------------------------------------- */
+const FORM_CONTACTO = {
+  taller: {
+    titulo:    'Solicitar Cita o Cotización',
+    servicio:  'Servicio de interés',
+    fecha:     'Fecha preferida',
+    notas:     'Detalles del vehículo o del trabajo',
+    holder:    'Marca, modelo, año, y qué necesita...',
+    modalidad: true,
+    saludo:    'Hola SARARON',
+    opciones: [
+      'Diagnóstico Computarizado General',
+      'Diagnóstico de Tren Delantero',
+      'Inspección con Cámara Térmica',
+      'Inspección para Compra de Vehículos',
+      'Cambio de Aceite de Motor',
+      'Cambio de Aceite de Transmisión',
+      'Cambio de Filtros',
+      'Cambio de Líquido de Frenos',
+      'Refrigerante (Coolant)',
+      'Inspección General de Seguridad',
+      'Importación de Vehículo',
+      'Compra de Vehículo del Catálogo'
+    ]
+  },
+  dealer: {
+    titulo:    'Solicitar Cotización o Información',
+    servicio:  '¿En qué podemos ayudarle?',
+    fecha:     'Fecha preferida de contacto o visita',
+    notas:     'Vehículo que busca o detalles de su solicitud',
+    holder:    'Marca, modelo, año, presupuesto aproximado...',
+    modalidad: false,
+    saludo:    'Hola LUXURA',
+    opciones: [
+      'Compra de un vehículo del catálogo',
+      'Compra en subastas internacionales',
+      'Importación de vehículos',
+      'Gestión documental',
+      'Inspección previa a la compra',
+      'Asesoría personalizada'
+    ]
+  }
+};
+
+function renderContactForm() {
+  const f   = FORM_CONTACTO[BRAND] || FORM_CONTACTO.taller;
+  const sel = document.getElementById('cf-service');
+  if (!sel) return;
+
+  document.getElementById('cf-title').textContent         = f.titulo;
+  document.getElementById('cf-service-label').textContent = f.servicio;
+  document.getElementById('cf-date-label').textContent    = f.fecha;
+  document.getElementById('cf-notes-label').textContent   = f.notas;
+  document.getElementById('cf-notes').placeholder         = f.holder;
+  document.getElementById('cf-mode-field').classList.toggle('hide', !f.modalidad);
+
+  sel.innerHTML = f.opciones.map(o => `<option>${esc(o)}</option>`).join('');
+}
+
 async function submitContact() {
   const name = val('cf-name'), phone = val('cf-phone');
   if (!name || !phone) return msg('contact-msg', 'err', 'Indique al menos su nombre y su teléfono.');
+
+  const f = FORM_CONTACTO[BRAND] || FORM_CONTACTO.taller;
 
   const req = {
     user_id:        SESSION ? SESSION.id : null,
     name, phone,
     email:          val('cf-mail') || null,
     service:        val('cf-service'),
-    mode:           val('cf-mode'),
+    // En el dealer no hay modalidad: se guarda 'Dealer' para distinguir el origen
+    mode:           f.modalidad ? val('cf-mode') : 'Dealer',
     preferred_date: val('cf-date') || null,
     notes:          val('cf-notes')
   };
@@ -1359,8 +1483,9 @@ async function submitContact() {
   }
 
   const txt = encodeURIComponent(
-    `Hola SARARON, soy ${name} (${phone}).\n` +
-    `Servicio: ${req.service}\nModalidad: ${req.mode}\n` +
+    `${f.saludo}, soy ${name} (${phone}).\n` +
+    `${BRAND === 'dealer' ? 'Consulta' : 'Servicio'}: ${req.service}\n` +
+    (f.modalidad ? `Modalidad: ${req.mode}\n` : '') +
     (req.preferred_date ? `Fecha preferida: ${req.preferred_date}\n` : '') +
     (req.notes ? `Detalles: ${req.notes}` : ''));
 
@@ -1538,6 +1663,13 @@ function closeModal(id) {
     document.body.style.overflow = '';
 }
 document.addEventListener('keydown', e => {
+  const lb = document.getElementById('lightbox');
+  if (lb && lb.classList.contains('open')) {
+    if (e.key === 'Escape')     closeLightbox();
+    if (e.key === 'ArrowLeft')  lbStep(-1);
+    if (e.key === 'ArrowRight') lbStep(1);
+    return;
+  }
   if (e.key === 'Escape') document.querySelectorAll('.modal.open').forEach(m => closeModal(m.id));
   const vm = document.getElementById('modal-vehicle');
   if (vm && vm.classList.contains('open')) {
@@ -1626,6 +1758,7 @@ function drawGear() {
 
   drawGear();
   initDropzones();
+  renderContactForm();
   buildMobileMenu();
   observeReveals();
 
