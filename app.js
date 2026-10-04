@@ -367,7 +367,8 @@ function renderNavAuth() {
     box.innerHTML = `<button class="avatar" onclick="openPanel()" title="${esc(SESSION.name)}"
                        style="width:38px;height:38px;font-size:.85rem;border:none">${esc(ini)}</button>`;
   } else {
-    box.innerHTML = `<button class="btn btn-line btn-sm" onclick="openAuth('login')">Iniciar Sesión</button>`;
+    box.innerHTML = `<button class="btn btn-line btn-sm" onclick="openAuth('login')">
+      <span class="lbl-full">Iniciar Sesión</span><span class="lbl-short">Entrar</span></button>`;
   }
   const qa = document.getElementById('btn-quick-add');
   if (qa) qa.classList.toggle('hide', !isAdmin());
@@ -464,7 +465,7 @@ async function renderCatalog() {
 
     return `
       <div class="veh-card" style="animation-delay:${i * 0.06}s" onclick="openVehicle('${v.id}')">
-        <div class="veh-media">
+        <div class="veh-media" onclick="openCardLightbox('${v.id}', event)">
           ${foto
             ? `<img id="veh-img-${v.id}" src="${esc(foto)}" alt="${esc(v.make)} ${esc(v.model)}" loading="lazy">`
             : `<div class="ph"><div class="i">${tipo ? tipo.icon : '🚗'}</div><div class="l">Sin fotos aún</div></div>`}
@@ -527,7 +528,7 @@ function updateCardMedia(id) {
 }
 
 /* --------- Ficha detallada --------- */
-let VD = { media: [], idx: 0 };
+let VD = { media: [], idx: 0, vehId: null, title: '' };
 
 async function openVehicle(id) {
   const v = VEH_CACHE[id] || await DB.getVehicle(id);
@@ -544,6 +545,8 @@ async function openVehicle(id) {
     ...(v.videos || []).map(x    => ({ kind: 'video', ...x }))
   ];
   VD.idx = 0;
+  VD.vehId = id;
+  VD.title = `${v.make} ${v.model} ${v.year || ''}`.trim();
   renderVdMedia();
 
   const especificaciones = [
@@ -609,7 +612,7 @@ function renderVdMedia() {
 
   const m = VD.media[VD.idx];
   let inner;
-  if (m.kind === 'img')          inner = `<img class="zoomable" src="${esc(m.src)}" alt="" onclick="openLightbox()"><div class="vd-zoom-hint">🔍 Toque para ampliar</div>`;
+  if (m.kind === 'img')          inner = `<img class="zoomable" src="${esc(m.src)}" alt="" onclick="openLightboxFromFicha()"><div class="vd-zoom-hint">🔍 Toque para ampliar</div>`;
   else if (m.type === 'youtube') inner = `<iframe src="https://www.youtube.com/embed/${esc(m.src)}"
       allowfullscreen allow="accelerometer;autoplay;encrypted-media;gyroscope;picture-in-picture"></iframe>`;
   else                           inner = `<video src="${esc(m.src)}" controls playsinline></video>`;
@@ -631,25 +634,53 @@ function vdStep(d) { VD.idx = (VD.idx + d + VD.media.length) % VD.media.length; 
 
 /* ---------------------------------------------------------------------
    VISOR DE FOTOS (pantalla completa)
-   Al tocar la foto principal de la ficha se abre en grande, con flechas,
-   teclado y deslizar con el dedo. Al cerrar, la ficha queda en la misma foto.
+   Se abre al tocar una foto, tanto en la tarjeta del catálogo como dentro
+   de la ficha. Flechas, teclado y deslizar con el dedo.
    --------------------------------------------------------------------- */
-let LB = { list: [], idx: 0, x0: null };
+let LB = { list: [], idx: 0, x0: null, title: '', vehId: null, desdeTarjeta: false };
 
-function openLightbox() {
-  LB.list = VD.media.filter(m => m.kind === 'img').map(m => m.src);
-  if (!LB.list.length) return;
-  const actual = VD.media[VD.idx];
-  LB.idx = Math.max(0, LB.list.indexOf(actual && actual.src));
+function openLightbox(list, start = 0, title = '', vehId = null, desdeTarjeta = false) {
+  if (!list || !list.length) return;
+  LB.list  = list;
+  LB.idx   = Math.min(Math.max(start, 0), list.length - 1);
+  LB.title = title;
+  LB.vehId = vehId;
+  LB.desdeTarjeta = desdeTarjeta;
+  LB.x0 = null;
+
   renderLightbox();
   const lb = document.getElementById('lightbox');
   lb.classList.add('open');
   lb.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+/* Toque sobre la foto de una tarjeta del catálogo */
+function openCardLightbox(id, ev) {
+  const v = VEH_CACHE[id];
+  if (!v || !(v.photos || []).length) return;   // sin fotos: el toque abre la ficha
+  ev.stopPropagation();
+  openLightbox(v.photos, CARD_IDX[id] || 0, `${v.make} ${v.model} ${v.year || ''}`.trim(), id, true);
+}
+
+/* Toque sobre la foto principal dentro de la ficha */
+function openLightboxFromFicha() {
+  const fotos  = VD.media.filter(m => m.kind === 'img').map(m => m.src);
+  const actual = VD.media[VD.idx];
+  openLightbox(fotos, Math.max(0, fotos.indexOf(actual && actual.src)), VD.title, VD.vehId, false);
 }
 
 function renderLightbox() {
-  document.getElementById('lb-img').src = LB.list[LB.idx];
+  const img = document.getElementById('lb-img');
+  img.classList.add('loading');
+  img.onload = img.onerror = () => img.classList.remove('loading');
+  img.src = LB.list[LB.idx];
+  if (img.complete && img.naturalWidth) img.classList.remove('loading');
+
+  document.getElementById('lb-title').textContent = LB.title;
   document.getElementById('lb-count').textContent = `${LB.idx + 1} / ${LB.list.length}`;
+  document.getElementById('lb-ficha').style.display = (LB.desdeTarjeta && LB.vehId) ? '' : 'none';
+
   const varias = LB.list.length > 1;
   document.querySelectorAll('#lightbox .lb-nav').forEach(b => b.style.display = varias ? '' : 'none');
   // Precarga la foto siguiente para que el cambio sea instantáneo
@@ -667,9 +698,26 @@ function closeLightbox() {
   if (!lb.classList.contains('open')) return;
   lb.classList.remove('open');
   lb.setAttribute('aria-hidden', 'true');
-  // La ficha queda mostrando la foto que se estaba viendo
-  const i = VD.media.findIndex(m => m.kind === 'img' && m.src === LB.list[LB.idx]);
-  if (i > -1) { VD.idx = i; renderVdMedia(); }
+
+  // La tarjeta o la ficha quedan mostrando la foto que se estaba viendo
+  if (LB.desdeTarjeta && LB.vehId) {
+    CARD_IDX[LB.vehId] = LB.idx;
+    updateCardMedia(LB.vehId);
+  } else {
+    const i = VD.media.findIndex(m => m.kind === 'img' && m.src === LB.list[LB.idx]);
+    if (i > -1) { VD.idx = i; renderVdMedia(); }
+  }
+
+  // Liberar el scroll sólo si no queda nada más abierto
+  const abierto = document.querySelector('.modal.open') || document.getElementById('panel').classList.contains('open');
+  if (!abierto) document.body.style.overflow = '';
+}
+
+/* Desde el visor abierto en una tarjeta: ir a la ficha completa */
+function lbVerFicha() {
+  const id = LB.vehId;
+  closeLightbox();
+  if (id) openVehicle(id);
 }
 
 // Deslizar con el dedo en el celular
